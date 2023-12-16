@@ -18,3 +18,5 @@
 		DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, -1.f, 0, 1.f); \
 		DrawDebugPoint(GetWorld(), EndLocation, 15.f, FColor::Red, false, -1.f); \
 	}
+
+#define LOG(Message) UE_LOG(LogTemp, Warning, Message);

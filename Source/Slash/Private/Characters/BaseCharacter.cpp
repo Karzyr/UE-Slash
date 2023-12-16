@@ -7,6 +7,7 @@
 #include "Components/AttributeComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Slash/DebugMacros.h"
 
 ABaseCharacter::ABaseCharacter()
 {
@@ -20,6 +21,18 @@ void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+}
+
+void ABaseCharacter::GetHit_Implementation(const FVector& ImpactPoint, const AActor* Hitter)
+{
+	if (IsAlive() && Hitter)
+	{
+		DirectionalHitReact(Hitter->GetActorLocation());
+	}
+	else Die();
+
+	PlayHitSound(ImpactPoint);
+	SpawnHitParticles(ImpactPoint);
 }
 
 void ABaseCharacter::Attack()
@@ -40,12 +53,12 @@ void ABaseCharacter::PlayHitReactMontage(const FName& SectionName)
 	}
 }
 
-void ABaseCharacter::DirectionalHitReact(const FVector& ImpactPoint)
+void ABaseCharacter::DirectionalHitReact(const FVector& OffenderLocation)
 {
 	const FVector Forward = GetActorForwardVector();
 	// Lower Impact Point to the Enemy's Actor Location Z
-	const FVector ImpactLowered(ImpactPoint.X, ImpactPoint.Y, GetActorLocation().Z);
-	const FVector ToHit = (ImpactLowered - GetActorLocation()).GetSafeNormal();
+	const FVector OffenderLowered(OffenderLocation.X, OffenderLocation.Y, GetActorLocation().Z);
+	const FVector ToHit = (OffenderLowered - GetActorLocation()).GetSafeNormal();
 
 	// Forward * ToHit = |Forward||ToHit| * cos(theta)
 	// |Forward| = 1, |ToHit| = 1, so Forward * ToHit = cos(theta)
@@ -139,6 +152,34 @@ int32 ABaseCharacter::PlayAttackMontage()
 int32 ABaseCharacter::PlayDeathMontage()
 {
 	return PlayRandomMontageSection(DeathMontage, DeathMontageSections);
+}
+
+void ABaseCharacter::StopAttackMontage()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+		AnimInstance->Montage_Stop(0.25f, AttackMontage);
+}
+
+FVector ABaseCharacter::GetTranslationWarpTarget()
+{
+	if (CombatTarget == nullptr) return FVector();
+
+	const FVector CombatTargetLocation = CombatTarget->GetActorLocation();
+	const FVector Location = GetActorLocation();
+
+	FVector TargetToMe = (Location - CombatTargetLocation).GetSafeNormal();
+	TargetToMe *= WarpTargetDistance;
+	
+	return CombatTargetLocation + TargetToMe;
+}
+
+FVector ABaseCharacter::GetRotationWarpTarget()
+{
+	if (CombatTarget)
+		return CombatTarget->GetActorLocation();
+
+	return FVector();
 }
 
 void ABaseCharacter::DisableCapsule()
