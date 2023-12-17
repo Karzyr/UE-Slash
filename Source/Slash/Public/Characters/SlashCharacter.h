@@ -5,9 +5,12 @@
 #include "CoreMinimal.h"
 #include "BaseCharacter.h"
 #include "CharacterTypes.h"
+#include "SlashAnimInstance.h"
 #include "SlashCharacter.generated.h"
 
 
+class USlashOverlay;
+class ASlashHUD;
 struct FInputActionValue;
 class USpringArmComponent;
 class UCameraComponent;
@@ -24,8 +27,11 @@ class SLASH_API ASlashCharacter : public ABaseCharacter
 
 public:
 	ASlashCharacter();
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void GetHit_Implementation(const FVector& ImpactPoint, const AActor* Hitter) override;
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	void InitializeSlashOverlay();	
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -96,7 +102,14 @@ private:
 	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	EActionState ActionState = EActionState::EAS_Unoccupied;
 
+	UPROPERTY()
+	USlashOverlay* SlashOverlay;
+
+	virtual void Die() override;
+	void HandleDamage(float DamageAmount) override;
+
 public:
 	FORCEINLINE void SetOverlappingItem(AItem* Item) { OverlappingItem = Item; }
 	FORCEINLINE ECharacterState GetCharacterState() const { return CharacterState; }
+	FORCEINLINE EActionState GetActionState() const { return ActionState; }
 };

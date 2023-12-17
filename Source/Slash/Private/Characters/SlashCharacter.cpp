@@ -12,6 +12,9 @@
 #include "Animation/AnimMontage.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Components/AttributeComponent.h"
+#include "HUD/SlashHUD.h"
+#include "HUD/SlashOverlay.h"
 
 ASlashCharacter::ASlashCharacter()
 {
@@ -44,15 +47,37 @@ ASlashCharacter::ASlashCharacter()
 	Eyebrows = CreateDefaultSubobject<UGroomComponent>(TEXT("Eyebrows"));
 	Eyebrows->SetupAttachment(GetMesh());
 	Eyebrows->AttachmentName = FString("head");
-
 }
 
 void ASlashCharacter::GetHit_Implementation(const FVector& ImpactPoint, const AActor* Hitter)
 {
 	Super::GetHit_Implementation(ImpactPoint, Hitter);
 	SetWeaponCollisionEnabled(ECollisionEnabled::NoCollision);
-	ActionState = EActionState::EAS_HitReact;
+	if (Attributes && Attributes->GetHealthPercent() > 0.f)
+		ActionState = EActionState::EAS_HitReact;	
+}
+
+float ASlashCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	HandleDamage(DamageAmount);
 	
+	if (Attributes && SlashOverlay)
+		SlashOverlay->SetHealthBarPercent(Attributes->GetHealthPercent());
+	return DamageAmount;
+}
+
+void ASlashCharacter::InitializeSlashOverlay()
+{
+	APlayerController* SlashController = Cast<APlayerController>(GetController());
+
+	if (SlashController)
+	{
+		ASlashHUD* SlashHUD = Cast<ASlashHUD>(SlashController->GetHUD());
+
+		if (SlashHUD)
+			SlashOverlay = SlashHUD->GetSlashOverlay();		
+	}
 }
 
 void ASlashCharacter::BeginPlay()
@@ -68,6 +93,8 @@ void ASlashCharacter::BeginPlay()
 			Subsystem->AddMappingContext(SlashContext, 0);
 		}
 	}
+
+	InitializeSlashOverlay();
 }
 
 
@@ -152,6 +179,20 @@ void ASlashCharacter::PlayEquipMontage(const FName& SectionName)
 void ASlashCharacter::FinishEquipping()
 {
 	ActionState = EActionState::EAS_Unoccupied;
+}
+
+void ASlashCharacter::Die()
+{
+	Super::Die();
+	ActionState = EActionState::ECS_Dead;
+	SlashOverlay->SetVisibility(ESlateVisibility::Hidden);
+	DisableCapsule();
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void ASlashCharacter::HandleDamage(float DamageAmount)
+{
+	Super::HandleDamage(DamageAmount);
 }
 
 void ASlashCharacter::Move(const FInputActionValue& Value)
