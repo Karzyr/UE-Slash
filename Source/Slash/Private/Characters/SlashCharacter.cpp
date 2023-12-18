@@ -15,10 +15,13 @@
 #include "Components/AttributeComponent.h"
 #include "HUD/SlashHUD.h"
 #include "HUD/SlashOverlay.h"
+#include "Items/Soul.h"
+#include "Items/Treasure.h"
+#include "Slash/DebugMacros.h"
 
 ASlashCharacter::ASlashCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -47,6 +50,12 @@ ASlashCharacter::ASlashCharacter()
 	Eyebrows = CreateDefaultSubobject<UGroomComponent>(TEXT("Eyebrows"));
 	Eyebrows->SetupAttachment(GetMesh());
 	Eyebrows->AttachmentName = FString("head");
+}
+
+void ASlashCharacter::Tick(float DeltaSeconds)
+{
+	if (Attributes && SlashOverlay)
+		SlashOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
 }
 
 void ASlashCharacter::GetHit_Implementation(const FVector& ImpactPoint, const AActor* Hitter)
@@ -78,6 +87,9 @@ void ASlashCharacter::InitializeSlashOverlay()
 		if (SlashHUD)
 			SlashOverlay = SlashHUD->GetSlashOverlay();		
 	}
+	
+	SlashOverlay->SetSouls(0);	
+	SlashOverlay->SetGold(0);
 }
 
 void ASlashCharacter::BeginPlay()
@@ -93,7 +105,7 @@ void ASlashCharacter::BeginPlay()
 			Subsystem->AddMappingContext(SlashContext, 0);
 		}
 	}
-
+	
 	InitializeSlashOverlay();
 }
 
@@ -107,6 +119,11 @@ void ASlashCharacter::EquipWeapon(AWeapon* Weapon)
 }
 
 void ASlashCharacter::AttackEnd()
+{
+	ActionState = EActionState::EAS_Unoccupied;
+}
+
+void ASlashCharacter::DodgeEnd()
 {
 	ActionState = EActionState::EAS_Unoccupied;
 }
@@ -195,6 +212,30 @@ void ASlashCharacter::HandleDamage(float DamageAmount)
 	Super::HandleDamage(DamageAmount);
 }
 
+void ASlashCharacter::SetOverlappingItem(AItem* Item)
+{
+	OverlappingItem = Item;
+}
+
+void ASlashCharacter::AddSouls(ASoul* Soul)
+{
+	if (Attributes && SlashOverlay)
+	{
+		Attributes->AddSouls(Soul->GetSouls());
+		SlashOverlay->SetSouls(Attributes->GetSouls());
+	}
+
+}
+
+void ASlashCharacter::AddGold(ATreasure* Gold)
+{
+	if (Attributes && SlashOverlay)
+	{
+		Attributes->AddGold(Gold->GetGold());
+		SlashOverlay->SetGold(Attributes->GetGold());
+	}
+}
+
 void ASlashCharacter::Move(const FInputActionValue& Value)
 {
 	if (ActionState != EActionState::EAS_Unoccupied) return;
@@ -241,6 +282,23 @@ void ASlashCharacter::Equip()
 		}
 	}
 }
+
+void ASlashCharacter::Dodge()
+{
+	if (ActionState != EActionState::EAS_Unoccupied) return;
+	if (Attributes && Attributes->GetStamina() > DodgeCost)
+	{
+		PlayDodgeMontage();
+		ActionState = EActionState::EAS_Dodging;
+
+		if (Attributes && SlashOverlay)
+		{
+			Attributes->SetStamina(DodgeCost);
+			SlashOverlay->SetStaminaBarPercent(Attributes->GetStaminaPercent());
+		}
+	}
+}
+
 
 void ASlashCharacter::Attack()
 {
@@ -297,6 +355,12 @@ void ASlashCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		if (AttackAction)
 		{
 			PlayerEnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ASlashCharacter::Attack);
+		}
+
+		// This calls the handler function (a UFUNCTION) by name on every tick while the input conditions are met, such as when holding a movement key down.
+		if (DodgeAction)
+		{
+			PlayerEnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &ASlashCharacter::Dodge);
 		}
 	}	
 }

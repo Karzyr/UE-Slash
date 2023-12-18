@@ -7,6 +7,7 @@
 #include "Characters/CharacterTypes.h"
 #include "Enemy.generated.h"
 
+class ASoul;
 class UHealthBarComponent;
 class UPawnSensingComponent;
 
@@ -127,4 +128,7 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = Combat)
 	float DeathLifeSpan = 8.f;
+
+	UPROPERTY(EditAnywhere, Category = "Droppable")
+	TSubclassOf<ASoul> Soul;
 };

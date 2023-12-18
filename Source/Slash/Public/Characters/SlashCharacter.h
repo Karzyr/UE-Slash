@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "BaseCharacter.h"
 #include "CharacterTypes.h"
-#include "SlashAnimInstance.h"
+#include "Interfaces/PickUpInterface.h"
 #include "SlashCharacter.generated.h"
 
 
@@ -21,16 +21,22 @@ class UInputMappingContext;
 class UInputAction;
 
 UCLASS()
-class SLASH_API ASlashCharacter : public ABaseCharacter
+class SLASH_API ASlashCharacter : public ABaseCharacter, public IPickUpInterface
 {
 	GENERATED_BODY()
 
 public:
 	ASlashCharacter();
+
+	virtual void Tick(float DeltaSeconds) override;
+	
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void GetHit_Implementation(const FVector& ImpactPoint, const AActor* Hitter) override;
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-	void InitializeSlashOverlay();	
+	void InitializeSlashOverlay();
+	virtual void SetOverlappingItem(AItem* Item) override;
+	virtual void AddSouls(ASoul* Soul) override;
+	virtual void AddGold(ATreasure* Gold) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -47,16 +53,20 @@ protected:
 	UInputAction* EquipAction;
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* AttackAction;
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* DodgeAction;
 	
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void Equip();
+	void Dodge();
 	virtual void Attack() override;
 	virtual void Jump() override;
 	
 	/** Combat */
 	void EquipWeapon(AWeapon* Weapon);
 	virtual void AttackEnd() override;
+	virtual void DodgeEnd() override;
 	UFUNCTION(BlueprintCallable)
 	void HitReactEnd();
 	virtual bool CanAttack() override;
@@ -109,7 +119,6 @@ private:
 	void HandleDamage(float DamageAmount) override;
 
 public:
-	FORCEINLINE void SetOverlappingItem(AItem* Item) { OverlappingItem = Item; }
 	FORCEINLINE ECharacterState GetCharacterState() const { return CharacterState; }
 	FORCEINLINE EActionState GetActionState() const { return ActionState; }
 };

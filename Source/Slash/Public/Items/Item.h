@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/PickUpInterface.h"
 #include "Item.generated.h"
 
+class UNiagaraSystem;
 class USphereComponent;
 
 enum class EItemState : uint8
@@ -15,7 +17,7 @@ enum class EItemState : uint8
 };
 
 UCLASS()
-class SLASH_API AItem : public AActor
+class SLASH_API AItem : public AActor, public IPickUpInterface
 {
 	GENERATED_BODY()
 	
@@ -45,6 +47,7 @@ protected:
 
 	UFUNCTION()
 	virtual void OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	virtual void SpawnPickUpSystem();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UStaticMeshComponent* ItemMesh;
@@ -55,7 +58,10 @@ protected:
 	USphereComponent* Sphere;
 
 	UPROPERTY(EditAnywhere)
-	class UNiagaraComponent* EmbersEffect;
+	class UNiagaraComponent* ItemEffect;
+	UPROPERTY(EditAnywhere)
+	UNiagaraSystem* PickUpEffect;
+	
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	float RunningTime;

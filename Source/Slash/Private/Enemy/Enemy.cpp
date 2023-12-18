@@ -8,6 +8,7 @@
 #include "Perception/PawnSensingComponent.h"
 #include "Components/AttributeComponent.h"
 #include "HUD/HealthBarComponent.h"
+#include "Items/Soul.h"
 #include "Items/Weapons/Weapon.h"
 
 AEnemy::AEnemy()
@@ -76,6 +77,9 @@ void AEnemy::GetHit_Implementation(const FVector& ImpactPoint, const AActor* Hit
 	ClearAttackTimer();
 
 	StopAttackMontage();
+
+	if (IsInsideAttackRadius() && !IsDead())
+		StartAttackTimer();
 }
 
 void AEnemy::BeginPlay()
@@ -96,6 +100,9 @@ void AEnemy::Die()
 	DisableCapsule();
 	SetLifeSpan(DeathLifeSpan);
 	GetCharacterMovement()->bOrientRotationToMovement = false;
+
+	if (Soul)		
+		GetWorld()->SpawnActor<ASoul>(Soul, GetActorLocation(), GetActorRotation());
 }
 
 void AEnemy::Attack()
